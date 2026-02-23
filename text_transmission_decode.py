@@ -24,7 +24,7 @@ carrier_freq = 20 #carrier frequency in hertz
 sampling_frequency = 100 #sampling frequency in hertz
 
 amp_list = file_read(filepath) #get the list of amplitudes from the file
-sinlist, coslist = downconversion(amp_list, carrier_freq, sampling_frequency) #gets the downconverted sin and cos lists (useful for demodulation)
+sinlist, coslist = downconversion(amp_list, carrier_freq, sampling_frequency) #gets the downconverted sin and cos lists (needed for demodulation)
 
 
 
