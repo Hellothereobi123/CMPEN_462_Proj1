@@ -3,22 +3,22 @@ import numpy as np
 def file_read(file_path): #reads the file of inputs and returns the values as a list of amplitudes
     content = []
     with open(file_path, 'r') as file:
-        content = file.read().split("\n")
+        content = file.read().split("\n") 
         content = content[:-1]
     for i in range(len(content)):
         content[i] = float(content[i])
     #print(content)
     return content
 def downconversion(amp_list, carrier_frequency, sampling_frequency):
-    sinlist = np.zeros(len(amp_list))
+    sinlist = np.zeros(len(amp_list)) #initializes sin array
     coslist = np.zeros(len(amp_list))
-    for i in range(len(sinlist)):
+    for i in range(len(sinlist)): #multiplies the input signal by the sin and cos of the carrier frequency to get the downconverted signal
         sinlist[i] = amp_list[i]*math.sin(2*math.pi*carrier_frequency*i*(1/sampling_frequency))
     for i in range(len(sinlist)):
         coslist[i] = amp_list[i]*math.cos(2*math.pi*carrier_frequency*i*(1/sampling_frequency))
     return sinlist, coslist
-def calc_fft(mat_size):
-    fft_mat = np.zeros((30, 30), dtype=np.complex128)
+def calc_fft(mat_size): #generates the mat_sizexmat_size FFT matrix for size mat_size
+    fft_mat = np.zeros((mat_size, mat_size), dtype=np.complex128)
     for row in range(mat_size):
         for col in range(mat_size):
             fft_mat[row][col] = math.e**complex(0, math.pi*2*(row*col)/mat_size)
