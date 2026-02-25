@@ -1,5 +1,6 @@
 import math
 import numpy as np
+import scipy.signal as signal
 def file_read(file_path): #reads the file of inputs and returns the values as a list of amplitudes
     content = []
     with open(file_path, 'r') as file:
@@ -7,6 +8,15 @@ def file_read(file_path): #reads the file of inputs and returns the values as a 
         content = content[:-1]
     for i in range(len(content)):
         content[i] = float(content[i])
+    #print(content)
+    return content
+def file_read_complex(file_path): #reads the file of inputs and returns the values as a list of amplitudes
+    content = []
+    with open(file_path, 'r') as file:
+        content = file.read().split("\n") 
+        content = content[:-1]
+    for i in range(len(content)):
+        content[i] = complex(content[i][:-1]+"j")
     #print(content)
     return content
 def downconversion(amp_list, carrier_frequency, sampling_frequency):
@@ -35,15 +45,24 @@ def filter(downconverted_list, sampling_freq, input_size):
             downconverted_list[i] = 0
     return downconverted_list
 def downsample(filtered_I, downsample_factor):
-    downsampled_list = np.zeros(len(filtered_I)//downsample_factor)
+    downsampled_list = np.zeros(len(filtered_I)//downsample_factor, dtype=np.complex128)
     for i in range(0, len(downsampled_list), 1):
         downsampled_list[i] = filtered_I[i*downsample_factor]
     return downsampled_list
 def correlate(preamble, bigger_list):
     corr_index = 0
+    max_corr = 0
     for i in range(len(bigger_list)-len(preamble)):
-        corr += preamble[i]*bigger_list[i]
-    return corr
+        corr = signal.correlate(bigger_list[i:i+len(preamble)], preamble, mode='valid')[0]
+        if np.abs(corr) > np.abs(max_corr):
+            max_corr = corr
+            corr_index = i
+    return corr_index, max_corr
+def combine_I_Q(I, Q):
+    combined_list = np.zeros(len(I), dtype=np.complex128)
+    for i in range(len(I)):
+        combined_list[i] = complex(I[i], Q[i])
+    return combined_list
 filepath = "./input.txt"
 carrier_freq = 20 #carrier frequency in hertz
 sampling_frequency = 100 #sampling frequency in hertz
@@ -56,15 +75,20 @@ dft = (input_size*idft_mat).conjugate().T
 #filter+downsample for I
 freq_domain = np.matmul(dft, I) #multiplies the FFT matrix by the filtered downconverted signal I to get the frequency domain representation of the signal
 filtered_freq = filter(freq_domain, sampling_frequency, input_size)
-time_domain = np.matmul(idft_mat, filtered_freq) #multiplies the IFFT matrix by the filtered frequency domain signal to get the time domain representation of the signal
+time_domain = np.matmul(idft_mat, filtered_freq, dtype=np.complex128) #multiplies the IFFT matrix by the filtered frequency domain signal to get the time domain representation of the signal
 downsampled_I = downsample(time_domain, 10)
 #filter+downsample for Q
 freq_domain = np.matmul(dft, Q) #multiplies the FFT matrix by the filtered downconverted signal I to get the frequency domain representation of the signal
 filtered_freq = filter(freq_domain, sampling_frequency, input_size)
 time_domain = np.matmul(idft_mat, filtered_freq) #multiplies the IFFT matrix by the filtered frequency domain signal to get the time domain representation of the signal
 downsampled_Q = downsample(time_domain, 10)
+#get preamble list
+preamble = file_read_complex("./preamble.txt")
+comb = combine_I_Q(downsampled_I, downsampled_Q)
+print(comb[101])
+print(correlate(preamble, comb)) #correlate the preamble with the downsampled I signal to find the start of the message
 
-print(downsampled_I)
-print(downsampled_Q)
+#print(downsampled_I)
+#print(downsampled_Q)
 
 
