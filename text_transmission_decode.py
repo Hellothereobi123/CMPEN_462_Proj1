@@ -1,5 +1,4 @@
 import math
-import binascii
 import numpy as np
 import scipy.signal as signal
 from scipy import fft 
@@ -81,9 +80,9 @@ def combine_I_Q(I, Q):
         combined_list[i] = I[i]+1j*Q[i]
     return combined_list
 
-def remove_preamble_noise(index, I, Q):
-    temp_Q = Q[index:]
-    temp_I = I[index:]
+def remove_preamble_noise(index, preamble_size, Q, I):
+    temp_Q = Q[index+preamble_size:]
+    temp_I = I[index+preamble_size:]
     return temp_Q, temp_I
 
 def find_QAM(Q,I):
@@ -91,22 +90,22 @@ def find_QAM(Q,I):
 
     for j in range(len(Q)):
         bit_val = 0b0000
-        if (Q[j] <= 4 and Q[j] > 2):
+        if (Q[j] > 2):
             bit_val = bit_val | 0b0000
         elif (Q[j] <= 2 and Q[j] > 0):
             bit_val = bit_val | 0b0100
         elif (Q[j] <= 0 and Q[j] > -2):
             bit_val = bit_val | 0b1100
-        elif (Q[j] <= -2 and Q[j] > -4):
+        elif (Q[j] < -2):
             bit_val = bit_val | 0b1000
 
-        if (I[j] <= 4 and I[j] > 2):
+        if (I[j] > 2):
             bit_val = bit_val | 0b0000
         elif (I[j] <= 2 and I[j] > 0):
             bit_val = bit_val | 0b0001
         elif (I[j] <= 0 and I[j] > -2):
             bit_val = bit_val | 0b0011
-        elif (I[j] <= -2 and I[j] > -4):
+        elif (I[j] < -2):
             bit_val = bit_val | 0b0010
 
         bitstream.append(bit_val)
@@ -124,7 +123,7 @@ def merge_bits(bitstream):
 def binary_to_ascii(bitstream):
     ascii_vector = []  
     for i in range(len(bitstream)):
-        ascii_vector.append(chr(bitstream[i]))
+        ascii_vector.append(chr(bitstream[i]%256))
     return ascii_vector
 
 
@@ -158,7 +157,10 @@ filtered_freq = filter(freq_domain, sampling_frequency, input_size)
 time_domain = (fft.ifft(filtered_freq)).real #must use real to make sure it is all real 
 #time_domain = np.matmul(idft_mat, filtered_freq) #multiplies the IFFT matrix by the filtered frequency domain signal to get the time domain representation of the signal
 downsampled_Q = downsample(time_domain, 10)
-
+print("og")
+print(Q)
+print ("downsamples")
+print(downsampled_Q)
 
 #get preamble list
 preamble = file_read_complex("./preamble.txt")
@@ -167,10 +169,14 @@ comb = combine_I_Q(downsampled_I, downsampled_Q)
 #print(correlate(preamble, comb)) #correlate the preamble with the downsampled I signal to find the start of the message
 #print(comb)
 corr_index, max_corr = correlate(preamble, comb)
-final_Q, final_I = remove_preamble_noise(corr_index, downsampled_I, downsampled_Q)
-bitstream = find_QAM(final_Q, final_I)
+final_Q, final_I = remove_preamble_noise(corr_index, len(preamble), downsampled_Q, downsampled_I)
+print("finals")
+print(final_Q)
+
+bitstream = find_QAM(final_Q*2, final_I*2)
 ascii_bitsteam = merge_bits(bitstream)
-#print([f"{val:08b}" for val in ascii_bitsteam])
+print('bitstreams')
+print([f"{val:08b}" for val in ascii_bitsteam])
 ascii_vector = binary_to_ascii(ascii_bitsteam)
 print(ascii_vector)
 print(len(ascii_vector))
