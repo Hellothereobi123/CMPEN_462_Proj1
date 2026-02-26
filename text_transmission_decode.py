@@ -1,4 +1,5 @@
 import math
+import binascii
 import numpy as np
 import scipy.signal as signal
 from scipy import fft 
@@ -114,11 +115,17 @@ def find_QAM(Q,I):
 
 def merge_bits(bitstream):
     merged_bitstream  = []
-    for i in range(0, len(bitstream), 2):
+    for i in range(0, len(bitstream)-1, 2):
         new_bits = bitstream[i] << 4
         new_bits = new_bits | bitstream[i+1]
         merged_bitstream.append(new_bits)
     return merged_bitstream
+
+def binary_to_ascii(bitstream):
+    ascii_vector = []  
+    for i in range(len(bitstream)):
+        ascii_vector.append(chr(bitstream[i]))
+    return ascii_vector
 
 
 filepath = "./input.txt"
@@ -162,9 +169,11 @@ comb = combine_I_Q(downsampled_I, downsampled_Q)
 corr_index, max_corr = correlate(preamble, comb)
 final_Q, final_I = remove_preamble_noise(corr_index, downsampled_I, downsampled_Q)
 bitstream = find_QAM(final_Q, final_I)
-print([f"{val:04b}" for val in bitstream])
 ascii_bitsteam = merge_bits(bitstream)
-print([f"{val:08b}" for val in ascii_bitsteam])
+#print([f"{val:08b}" for val in ascii_bitsteam])
+ascii_vector = binary_to_ascii(ascii_bitsteam)
+print(ascii_vector)
+print(len(ascii_vector))
 
 
 
