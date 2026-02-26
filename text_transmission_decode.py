@@ -1,6 +1,9 @@
 import math
 import numpy as np
 import scipy.signal as signal
+from scipy import fft 
+
+
 def file_read(file_path): #reads the file of inputs and returns the values as a list of amplitudes
     content = []
     with open(file_path, 'r') as file:
@@ -10,6 +13,8 @@ def file_read(file_path): #reads the file of inputs and returns the values as a 
         content[i] = float(content[i])
     #print(content)
     return content
+
+
 def file_read_complex(file_path): #reads the file of inputs and returns the values as a list of amplitudes
     content = []
     with open(file_path, 'r') as file:
@@ -19,36 +24,45 @@ def file_read_complex(file_path): #reads the file of inputs and returns the valu
         content[i] = complex(content[i][:-1]+"j")
     #print(content)
     return content
+
+
 def downconversion(amp_list, carrier_frequency, sampling_frequency):
     downconverted_list = np.zeros(len(amp_list), dtype=np.complex128)
     I = np.zeros(len(amp_list)) #initializes sin array
     Q = np.zeros(len(amp_list))
     for i in range(len(downconverted_list)): #multiplies the input signal by the sin and cos of the carrier frequency to get the downconverted signal
-        curr_I = amp_list[i]*math.cos(2*math.pi*carrier_frequency*i*(1/sampling_frequency))
+        curr_I = amp_list[i]*math.cos(2*math.pi*carrier_frequency*i*(1/sampling_frequency))  #why are we multiplying by 'i' here 
         curr_Q = amp_list[i]*math.sin(2*math.pi*carrier_frequency*i*(1/sampling_frequency))
         I[i] = curr_I
         Q[i] = curr_Q
         #downconverted_list[i] = complex(curr_I, curr_Q)
     return I, Q
+
+
 def calc_ifft(mat_size, sample_size): #generates the mat_sizexmat_size FFT matrix for size mat_size
     fft_mat = np.zeros((mat_size, mat_size), dtype=np.complex128)
     for row in range(mat_size):
         for col in range(mat_size):
             fft_mat[row][col] = math.e**complex(0, math.pi*2*(row*col)/mat_size)
     return fft_mat/sample_size
+
+
 def filter(downconverted_list, sampling_freq, input_size):
     for i in range(len(downconverted_list)):
         if i*sampling_freq/input_size > 5.1 and i*sampling_freq/input_size <= sampling_freq/2:
-            print("eeeee")
             downconverted_list[i] = 0
         elif -(input_size-i)*sampling_freq/input_size < -5.1 and -(input_size-i)*sampling_freq/input_size > -sampling_freq/2:
             downconverted_list[i] = 0
     return downconverted_list
+
+
 def downsample(filtered_I, downsample_factor):
     downsampled_list = np.zeros(len(filtered_I)//downsample_factor, dtype=np.complex128)
     for i in range(0, len(downsampled_list), 1):
         downsampled_list[i] = filtered_I[i*downsample_factor]
     return downsampled_list
+
+
 def correlate(preamble, bigger_list):
     corr_index = 0
     max_corr = 0
@@ -58,11 +72,55 @@ def correlate(preamble, bigger_list):
             max_corr = corr
             corr_index = i
     return corr_index, max_corr
+
+
 def combine_I_Q(I, Q):
     combined_list = np.zeros(len(I), dtype=np.complex128)
     for i in range(len(I)):
-        combined_list[i] = complex(I[i], Q[i])
+        combined_list[i] = I[i]+1j*Q[i]
     return combined_list
+
+def remove_preamble_noise(index, I, Q):
+    temp_Q = Q[index:]
+    temp_I = I[index:]
+    return temp_Q, temp_I
+
+def find_QAM(Q,I):
+    bitstream = []
+
+    for j in range(len(Q)):
+        bit_val = 0b0000
+        if (Q[j] <= 4 and Q[j] > 2):
+            bit_val = bit_val | 0b0000
+        elif (Q[j] <= 2 and Q[j] > 0):
+            bit_val = bit_val | 0b0100
+        elif (Q[j] <= 0 and Q[j] > -2):
+            bit_val = bit_val | 0b1100
+        elif (Q[j] <= -2 and Q[j] > -4):
+            bit_val = bit_val | 0b1000
+
+        if (I[j] <= 4 and I[j] > 2):
+            bit_val = bit_val | 0b0000
+        elif (I[j] <= 2 and I[j] > 0):
+            bit_val = bit_val | 0b0001
+        elif (I[j] <= 0 and I[j] > -2):
+            bit_val = bit_val | 0b0011
+        elif (I[j] <= -2 and I[j] > -4):
+            bit_val = bit_val | 0b0010
+
+        bitstream.append(bit_val)
+
+    return bitstream
+
+def merge_bits(bitstream):
+    merged_bitstream  = []
+    for i in range(0, len(bitstream), 2):
+        new_bits = bitstream[i] << 4
+        new_bits = new_bits | bitstream[i+1]
+        merged_bitstream.append(new_bits)
+    return merged_bitstream
+
+
 filepath = "./input.txt"
 carrier_freq = 20 #carrier frequency in hertz
 sampling_frequency = 100 #sampling frequency in hertz
@@ -70,25 +128,46 @@ input_size = 3000
 
 amp_list = file_read(filepath) #get the list of amplitudes from the file
 I, Q = downconversion(amp_list, carrier_freq, sampling_frequency) #gets the downconverted I and Q lists (needed for demodulation)
-idft_mat = calc_ifft(input_size, input_size) #calculates the IFFT matrix for the input size (frequency domain to time domain)
-dft = (input_size*idft_mat).conjugate().T 
+
+#commeting out bc scipu has function to apply fft and ifft directly to i and q 
+#idft_mat = calc_ifft(input_size, input_size) #calculates the IFFT matrix for the input size (frequency domain to time domain)
+#dft = (input_size*idft_mat).conjugate().T 
+
+
+
 #filter+downsample for I
-freq_domain = np.matmul(dft, I) #multiplies the FFT matrix by the filtered downconverted signal I to get the frequency domain representation of the signal
+#freq_domain = np.matmul(dft, I) #multiplies the FFT matrix by the filtered downconverted signal I to get the frequency domain representation of the signal
+freq_domain = fft.fft(I)
 filtered_freq = filter(freq_domain, sampling_frequency, input_size)
-time_domain = np.matmul(idft_mat, filtered_freq, dtype=np.complex128) #multiplies the IFFT matrix by the filtered frequency domain signal to get the time domain representation of the signal
+time_domain = (fft.ifft(filtered_freq)).real
+#time_domain = np.matmul(idft_mat, filtered_freq, dtype=np.complex128) #multiplies the IFFT matrix by the filtered frequency domain signal to get the time domain representation of the signal
 downsampled_I = downsample(time_domain, 10)
+
+
 #filter+downsample for Q
-freq_domain = np.matmul(dft, Q) #multiplies the FFT matrix by the filtered downconverted signal I to get the frequency domain representation of the signal
+#freq_domain = np.matmul(dft, Q) #multiplies the FFT matrix by the filtered downconverted signal I to get the frequency domain representation of the signal
+freq_domain = fft.fft(Q)
 filtered_freq = filter(freq_domain, sampling_frequency, input_size)
-time_domain = np.matmul(idft_mat, filtered_freq) #multiplies the IFFT matrix by the filtered frequency domain signal to get the time domain representation of the signal
+time_domain = (fft.ifft(filtered_freq)).real #must use real to make sure it is all real 
+#time_domain = np.matmul(idft_mat, filtered_freq) #multiplies the IFFT matrix by the filtered frequency domain signal to get the time domain representation of the signal
 downsampled_Q = downsample(time_domain, 10)
+
+
 #get preamble list
 preamble = file_read_complex("./preamble.txt")
 comb = combine_I_Q(downsampled_I, downsampled_Q)
-print(comb[101])
-print(correlate(preamble, comb)) #correlate the preamble with the downsampled I signal to find the start of the message
+#print(comb[100])
+#print(correlate(preamble, comb)) #correlate the preamble with the downsampled I signal to find the start of the message
+#print(comb)
+corr_index, max_corr = correlate(preamble, comb)
+final_Q, final_I = remove_preamble_noise(corr_index, downsampled_I, downsampled_Q)
+bitstream = find_QAM(final_Q, final_I)
+print([f"{val:04b}" for val in bitstream])
+ascii_bitsteam = merge_bits(bitstream)
+print([f"{val:08b}" for val in ascii_bitsteam])
 
-#print(downsampled_I)
-#print(downsampled_Q)
+
+
+
 
 
