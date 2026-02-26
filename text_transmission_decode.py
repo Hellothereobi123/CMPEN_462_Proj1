@@ -4,6 +4,10 @@ import scipy.signal as signal
 from scipy import fft 
 from spellchecker import SpellChecker
 
+# Authors: Brandon Widjaja & Tharun Dilliraj 
+# MP 1 assignment : wireless radio 
+# 2/25/26 
+
 #################################################################################################################################################
 #helper functions
 
@@ -131,7 +135,9 @@ def error_checking(str_list): #uses spel check libriary to spell check the words
 #############################################################################################################################################
 #testing functions begin here 
 
-filepath = "./input.txt"
+filepath = "./input.txt" # change the file path to change input txt 
+preamble = file_read_complex("./preamble.txt") # change the file path to change preamble txt
+
 carrier_freq = 20 #carrier frequency in hertz
 sampling_frequency = 100 #sampling frequency in hertz
 input_size = 3000 # number of samples 
@@ -152,8 +158,7 @@ filtered_freq = filter(freq_domain, sampling_frequency, input_size) #filter the 
 time_domain = (fft.ifft(filtered_freq)).real #multiplies the IFFT matrix by the filtered frequency domain signal to get the time domain representation of the signal. In addition we mustconvert to real in order to use for QAM
 downsampled_Q = downsample(time_domain, 10) #downsample Q signal
 
-#get preamble list
-preamble = file_read_complex("./preamble.txt") 
+#correlate and remove noise 
 comb = combine_I_Q(downsampled_I, downsampled_Q) #combine I and Q for correlation
 corr_index = correlate(preamble, comb) #find the location of highest correlation 
 final_Q, final_I = remove_preamble_noise(corr_index, len(preamble), downsampled_Q, downsampled_I) #remove noise and preamble from I and Q signals
