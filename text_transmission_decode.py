@@ -3,6 +3,7 @@ import numpy as np
 import scipy.signal as signal
 from scipy import fft 
 from spellchecker import SpellChecker
+from textblob import TextBlob 
 
 # Authors: Brandon Widjaja & Tharun Dilliraj 
 # MP 1 assignment : wireless radio 
@@ -129,7 +130,13 @@ def error_checking(str_list): #uses spel check libriary to spell check the words
     spell = SpellChecker()
 
     for word in str_list:
-        correct_list.append(spell.correction(word)) # corrects word if it knows what it is, if not append none
+        suggestion = spell.correction(word)
+
+        if suggestion is None: # corrects word if it knows what it is, if not append original 
+            correct_list.append(word) 
+        else:
+            correct_list.append(suggestion)
+        
     return correct_list # returns a list of corrected words 
 
 #############################################################################################################################################
@@ -172,10 +179,14 @@ print(ascii_string) # print the unchecked out put
 
 #below is the word spell checker 
 """
+
+
 word_str = ascii_string.split()
 corrected_str = error_checking(word_str) #spell check every word
-print(corrected_str)
-print(''.join(corrected_str))
+corrected_str = ' '.join(corrected_str)
+
+b = TextBlob(corrected_str)
+print(b.correct())
 """
 
 
