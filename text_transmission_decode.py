@@ -130,6 +130,7 @@ def error_checking(str_list): #uses spel check libriary to spell check the words
 
     for word in str_list:
         correct_list.append(spell.correction(word)) # corrects word if it knows what it is, if not append none
+    print(correct_list)
     return correct_list # returns a list of corrected words 
 
 #############################################################################################################################################
@@ -168,16 +169,17 @@ bitstream = find_QAM(final_Q*2, final_I*2) #assigned each signal a binary QAM va
 ascii_bitsteam = merge_bits(bitstream) # merge two 4 bits into 8 bits 
 ascii_vector = binary_to_ascii(ascii_bitsteam) # change 8 bits into ascii 
 ascii_string=''.join(ascii_vector) # join the Ascii together to create full sentence 
+ascii_string = ascii_string.replace('!', ' ') # remove null characters from the string
 print(ascii_string) # print the unchecked out put 
 
 #below is the word spell checker 
-"""
+'''
 word_str = ascii_string.split()
 corrected_str = error_checking(word_str) #spell check every word
 print(corrected_str)
-print(''.join(corrected_str))
-"""
+print(' '.join(corrected_str))
 
+'''
 
 
 
