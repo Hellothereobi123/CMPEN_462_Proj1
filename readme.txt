@@ -13,7 +13,7 @@ Python 3
 
 Instructions:
 1. Clone the repository locally in whatever repo you wish.
-2. Create a virtual environment and activate it
+2. Create a virtual environment and activate it.
 3. run the following command to install the necessary libraries: 'pip install numpy scipy'
 4. run the command by calling 'python text_transmission_decode.py' from the directory (You need to be in the same directory for this command to work)
 
